@@ -39,6 +39,8 @@ public class Reccomender
 		
 		//Create each table here
 		createMoviesTable();
+		createGenresTable();
+		
 	}
 	
 	private void createMoviesTable()
@@ -72,7 +74,43 @@ public class Reccomender
 		    statement.executeUpdate(sqlCreateMovies);
 		    System.out.println("[OK]");
 	      
-	      System.out.println("Worked");
+		} catch (Exception e)
+		{
+			System.out.println("[WARN] " + e.toString());
+		}
+	}
+	
+	private void createGenresTable()
+	{
+		try {
+			String sqlCreateGenres = "CREATE TABLE movie_genres ("
+    		  		+"movieID			int	not null,"
+    		  		+"genre 			varchar(255),"
+    		  		+"primary key (movieID, genre));";
+			
+			System.out.print("Creating table genres...");
+		    statement.executeUpdate(sqlCreateGenres);
+		    System.out.println("[OK]");
+	      
+		} catch (Exception e)
+		{
+			System.out.println("[WARN] " + e.toString());
+		}
+	}
+	
+	private void createDirectorsTable()
+	{
+		try {
+			String sqlCreateDirectors = "CREATE TABLE movie_directors ("
+    		  		+"movieID				int	not null,"
+    		  		+"directorID			varchar(255),"
+    		  		+"directorName			varchar(255),"
+    		  		+"primary key (directorID, movieID));";
+			
+			System.out.print("Creating table diretors...");
+		    statement.executeUpdate(sqlCreateDirectors);
+		    System.out.println("[OK]");
+		    
 		} catch (Exception e)
 		{
 			System.out.println("[WARN] " + e.toString());
