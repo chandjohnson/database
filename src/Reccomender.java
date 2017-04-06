@@ -6,7 +6,7 @@ public class Reccomender
 	   static final String DB_URL = "jdbc:mysql://localhost:3306/movie_reccomender?useSSL=false"; //YOUR DATABASE NAME
 
 	   static final String USER = "root";
-	   static final String PASS = "password"; //SET AS YOUR PASSWORD
+	   static final String PASS = "windowlicker"; //SET AS YOUR PASSWORD
 	   
 	   Statement statement = null;
 	   Connection connection = null;
@@ -15,6 +15,7 @@ public class Reccomender
 	{
 		Reccomender reccomender = new Reccomender();
 		reccomender.initDB();
+		reccomender.loadData();
 	}
 	
 	private void initDB()
@@ -40,6 +41,12 @@ public class Reccomender
 		//Create each table here
 		createMoviesTable();
 		createGenresTable();
+		createDirectorsTable();
+	}
+	
+	private void loadData()
+	{
+		//Load the data from the .dat files here
 		
 	}
 	
