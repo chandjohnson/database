@@ -8,7 +8,7 @@ public class Database
 	static final String DRIVER = "com.mysql.jdbc.Driver";  
 	static final String LOCATION = "jdbc:mysql://localhost:3306/movie_reccomender?useSSL=false"; //YOUR DATABASE NAME
 	static final String USERNAME = "root";
-	static final String PASSWORD = "windowlicker"; //SET AS YOUR PASSWORD
+	static final String PASSWORD = "password"; //SET AS YOUR PASSWORD
 	   
 	Statement statement = null;
 	Connection connection = null;
@@ -227,7 +227,7 @@ public class Database
 	private void createUserTaggedTable()
 	{
 		try {
-			String sqlCreateTaggedTable = "CREATE USER user_taggedmovies_timestamps ("
+			String sqlCreateTaggedTable = "CREATE TABLE user_taggedmovies_timestamps ("
     		  		+"userID					int	not null,"
     		  		+"movieID   				int,"
     		  		+"tagID  					int,"
