@@ -6,7 +6,7 @@ public class Database
 {
 	
 	static final String DRIVER = "com.mysql.jdbc.Driver";  
-	static final String LOCATION = "jdbc:mysql://localhost:3306/movie_reccomender?useSSL=false"; //YOUR DATABASE NAME
+	static final String LOCATION = "jdbc:mysql://localhost:3306/movie_recommender?useSSL=false"; //YOUR DATABASE NAME
 	static final String USERNAME = "root";
 	static final String PASSWORD = "password"; //SET AS YOUR PASSWORD
 	   

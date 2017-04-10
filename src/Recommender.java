@@ -1,4 +1,4 @@
-public class Reccomender
+public class Recommender
 {
 	public static void main(String[] args)
 	{
