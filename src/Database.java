@@ -1,5 +1,10 @@
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.sql.Statement;
 
 public class Database
@@ -8,7 +13,7 @@ public class Database
 	static final String DRIVER = "com.mysql.jdbc.Driver";  
 	static final String LOCATION = "jdbc:mysql://localhost:3306/movie_recommender?useSSL=false"; //YOUR DATABASE NAME
 	static final String USERNAME = "root";
-	static final String PASSWORD = "password"; //SET AS YOUR PASSWORD
+	static final String PASSWORD = "windowlicker"; //SET AS YOUR PASSWORD
 	   
 	Statement statement = null;
 	Connection connection = null;
@@ -42,16 +47,50 @@ public class Database
 			createTaggedMoviesTable();
 			createRatedMoviesTable();
 			
+			//Populate each table here
+			loadMovies();
+			
 		} catch (Exception e)
 		{
 			System.out.println("[FAIL] " + e.toString());
 		}
 	}
 	
-	private void loadData()
+	private void loadMovies()
 	{
 		//Load the data from the .dat files here
-		
+
+		System.out.print("Pupulating movies table (this may take some time)...");
+		try
+		{
+			BufferedReader br;
+			br = new BufferedReader(new FileReader("Rotten Tomatos Dataset/movies.dat"));
+			String line;
+			
+			String sqlEmptyTable = "DELETE FROM movies;";
+			statement.executeUpdate(sqlEmptyTable);
+			
+			br.readLine();
+			
+			while ((line = br.readLine()) != null)
+			{
+				String [] dataChunk = line.replace("\'", "\\'").replace("\"", "\\\"").split("\t");
+				if (dataChunk.length == 21)
+				{
+					String sqlInsert = "INSERT INTO movies VALUES (" + dataChunk[0] +", \'" + dataChunk[1] + "\', " + dataChunk[2] + ", \'" + dataChunk[3] + "\', \'" + dataChunk[4] + "\', " + dataChunk[5] + ", \'" + dataChunk[6] + "\', " + dataChunk[7] + ", " + dataChunk[8] + ", " + dataChunk[9] + ", " + dataChunk[10] + ", " + dataChunk[11] + ", " + dataChunk[12] + ", " + dataChunk[13] + ", " + dataChunk[14] + ", " + dataChunk[15] + ", " + dataChunk[16] + ", " + dataChunk[17] + ", " + dataChunk[18] + ", " + dataChunk[19] + ", \'" + dataChunk[20] + "\');";
+					statement.executeUpdate(sqlInsert);
+				}
+				else
+				{
+					System.out.println("Omitted unformatted tuple " + line);
+				}
+			}
+			br.close();
+			System.out.println("[OK]");
+		} catch (Exception e)
+		{
+			System.out.println("[FAIL] " + e.toString());
+		}
 	}
 	
 	private void createMoviesTable()
