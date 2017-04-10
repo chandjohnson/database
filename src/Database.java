@@ -38,6 +38,9 @@ public class Database
 			createLocationsTable();
 			createTagsTable();
 			createMovieTagsTable();
+			createUserTaggedTable();
+			createTaggedMoviesTable();
+			createRatedMoviesTable();
 			
 		} catch (Exception e)
 		{
@@ -205,7 +208,7 @@ public class Database
 	private void createMovieTagsTable()
 	{
 		try {
-			String sqlCreateMovieTags = "create table movie_tags ("
+			String sqlCreateMovieTags = "CREATE TABLE movie_tags ("
     		  		+"movieID				int	not null,"
     		  		+"tagID 				int,"
     		  		+"tagWeight				int,"
@@ -224,7 +227,7 @@ public class Database
 	private void createUserTaggedTable()
 	{
 		try {
-			String sqlCreateTaggedTable = "create table user_taggedmovies_timestamps ("
+			String sqlCreateTaggedTable = "CREATE USER user_taggedmovies_timestamps ("
     		  		+"userID					int	not null,"
     		  		+"movieID   				int,"
     		  		+"tagID  					int,"
@@ -240,4 +243,55 @@ public class Database
 			System.out.println("[WARN] " + e.toString());
 		}
 	}
+	
+	private void createTaggedMoviesTable()
+	{
+		try {
+			String sqlTaggedMoviesTable = "CREATE TABLE user_taggedmovies ("
+    		  		+"userID					int	not null,"
+    		  		+"movieID					int,"
+    		  		+"tagID						int,"
+    		  		+"date_day					int,"
+    		  		+"date_month				int,"
+    		  		+"date_year					int,"
+    		  		+"date_hour					int,"
+    		  		+"date_minute				int,"
+    		  		+"date_second				int,"
+    		  		+"primary key (userID, movieID, tagID));";
+			
+			System.out.print("Creating table tagged movies...");
+		    statement.executeUpdate(sqlTaggedMoviesTable);
+		    System.out.println("[OK]");
+		    
+		} catch (Exception e)
+		{
+			System.out.println("[WARN] " + e.toString());
+		}
+	}
+	
+	private void createRatedMoviesTable()
+	{
+		try {
+			String sqlRatedMovies = "CREATE TABLE user_ratedmovies ("
+	  		  		+"userID					int	not null,"
+	  		  		+"movieID					int,"
+	  		  		+"rating					double,"
+	  		  		+"date_day					int,"
+	  		  		+"date_month				int,"
+	  		  		+"date_year					int,"
+	  		  		+"date_hour					int,"
+	  		  		+"date_minute				int,"
+	  		  		+"date_second				int,"
+	  		  		+"primary key (userID, movieID));";
+			
+			System.out.print("Creating table rated movies...");
+		    statement.executeUpdate(sqlRatedMovies);
+		    System.out.println("[OK]");
+		    
+		} catch (Exception e)
+		{
+			System.out.println("[WARN] " + e.toString());
+		}
+	}
+
 }
