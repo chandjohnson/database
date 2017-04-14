@@ -2,14 +2,17 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.sql.Statement;
 
 public class Database
 {
 	
-	static final String DRIVER = "com.mysql.jdbc.Driver";  
-	static final String LOCATION = "jdbc:mysql://localhost:3306/movie_recommender?useSSL=false"; //YOUR DATABASE NAME
-	static final String USERNAME = "root";
+	static final String DRIVER = "com.mysql.jdbc.Driver";
+	static final String DATABASE = "movie_recommender"; //SET AS YOUR DATABASE
+	static final String USERNAME = "root"; //SET AS YOUR USERNAME
 	static final String PASSWORD = "windowlicker"; //SET AS YOUR PASSWORD
 	   
 	Statement database = null;
@@ -23,7 +26,7 @@ public class Database
 			
 			//Opening the connection to the database
 			System.out.print("Connecting to database...");
-			connection = DriverManager.getConnection(LOCATION, USERNAME, PASSWORD);
+			connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/" + DATABASE + "?useSSL=false", USERNAME, PASSWORD);
 			System.out.println("[OK]");
 			
 			//Initializing the database
@@ -34,6 +37,31 @@ public class Database
 		} catch (Exception e)
 		{
 			System.out.println("[FAIL] " + e.toString());
+		}
+	}
+	
+	public void query(String sqlQuery)
+	{
+		try
+		{
+			ResultSet result = database.executeQuery(sqlQuery);
+			ResultSetMetaData metaData = result.getMetaData();
+			
+			int cols = metaData.getColumnCount();
+			
+			while (result.next())
+			{
+				for(int i = 1; i <= cols; ++i)
+				{
+					System.out.print(result.getString(i));
+					if(i != cols) System.out.print(", ");
+				}
+				System.out.println();
+			}
+		} catch (SQLException e)
+		{
+			System.out.println("[ERROR] " + e.toString());
+			e.printStackTrace();
 		}
 	}
 	
@@ -48,59 +76,63 @@ public class Database
 		createTagsTable();
 		createMovieTagsTable();
 		createUserTaggedTable();
+		createUserRatedTable();
 		createTaggedMoviesTable();
 		createRatedMoviesTable();
 	}
 	
-	public void populateTables()
+	public void migrateTables()
 	{
-		//Need to fix a few errors on the commented tables
-		
-		loadData("movies");
-		loadData("movie_genres");
-		loadData("movie_directors");
-		loadData("movie_actors");
-		//loadData("movie_countries");
-		//loadData("movie_locations");
-		loadData("movie_tags");
-		//loadData("user_taggedmovies_timestamps");
-		//loadData("user_taggedmovies");
-		loadData("user_ratedmovies");
+		loadData("movies",21);
+		loadData("movie_genres",2);
+		loadData("movie_directors",3);
+		loadData("movie_actors",4);
+		loadData("movie_countries",2);
+		loadData("movie_locations",5);
+		loadData("movie_tags",3);
+		loadData("tags",2);
+		loadData("user_ratedmovies_timestamps",4);
+		loadData("user_taggedmovies_timestamps",9);
+		loadData("user_taggedmovies",9);
+		loadData("user_ratedmovies",9);
 	}
 	
-	private void loadData(String table)
+	private void loadData(String table, int cols)
 	{
-		System.out.print("Populating " + table + " table");
+		System.out.print("Migrating " + table + " table");
 		try
-		{
+		{	
 			BufferedReader br;
 			br = new BufferedReader(new FileReader("Rotten Tomatos Dataset/" + table + ".dat"));
+			br.readLine();
+			
 			String line;
+			int loadBar = 0;
 			
 			String sqlEmptyTable = "DELETE FROM " + table + ";";
 			database.executeUpdate(sqlEmptyTable);
 			
-			int loadBar = 0;
-			
-			br.readLine();
-			
 			while ((line = br.readLine()) != null)
 			{
-				String [] dataChunk = line.replace("\'", "\\'").split("\t");
+				String[] dataChunk = line.replace("\'", "\\'").split("\t");
 				StringBuilder sqlInsert = new StringBuilder();
+				
+				if(dataChunk.length < cols) continue;
 				
 				sqlInsert.append("INSERT INTO " + table + " VALUES (");
 				
-				for(int i = 0; i < dataChunk.length; ++i)
+				for(int i = 0; i < cols; ++i)
 				{
-					// Special case
-					if(dataChunk[i].equals("\\N")) dataChunk[i] = "0";
-					
-					sqlInsert.append("'" + dataChunk[i] + "'");
-					
-					if(i == dataChunk.length - 1) sqlInsert.append(");");
-					else sqlInsert.append(",");
+					sqlInsert.append("'");
+					if(i < dataChunk.length)
+					{
+						if(dataChunk[i].equals("\\N")) dataChunk[i] = "0";
+						sqlInsert.append(dataChunk[i]);
+					}
+					if(i == cols -1) sqlInsert.append("');");
+					else sqlInsert.append("',");
 				}
+				
 				database.executeUpdate(sqlInsert.toString());
 				if(loadBar++ % 4000 == 0) System.out.print(".");
 			}
@@ -108,6 +140,7 @@ public class Database
 			System.out.println("[OK]");
 		} catch (Exception e)
 		{
+			e.printStackTrace();
 			System.out.println("[FAIL] " + e.toString());
 		}
 	}
@@ -312,7 +345,7 @@ public class Database
 			String sqlDropUserTagged = "DROP TABLE IF EXISTS user_taggedmovies_timestamps;";
 			database.executeUpdate(sqlDropUserTagged);
 			
-			String sqlCreateTaggedTable = "CREATE TABLE user_taggedmovies_timestamps ("
+			String sqlCreateTagged = "CREATE TABLE user_taggedmovies_timestamps ("
     		  		+"userID					int	not null,"
     		  		+"movieID   				int,"
     		  		+"tagID  					int,"
@@ -320,7 +353,30 @@ public class Database
     		  		+"primary key (userID, movieID, tagID));";
 			
 			System.out.print("Creating table user_taggedmovies_timestamps...");
-		    database.executeUpdate(sqlCreateTaggedTable);
+		    database.executeUpdate(sqlCreateTagged);
+		    System.out.println("[OK]");
+		    
+		} catch (Exception e)
+		{
+			System.out.println("[FAIL] " + e.toString());
+		}
+	}
+	
+	private void createUserRatedTable()
+	{
+		try {
+			String sqlDropUserRated = "DROP TABLE IF EXISTS user_ratedmovies_timestamps;";
+			database.executeUpdate(sqlDropUserRated);
+			
+			String sqlCreateUserRatedTable = "create table user_ratedmovies_timestamps ("
+	  		  		+"userID						int	not null,"
+	  		  		+"movieID   					int,"
+	  		  		+"rating  						double,"
+	  		  		+"timestamp						long,"
+	  		  		+"primary key (userID, movieID));";
+			
+			System.out.print("Creating table user_ratedmovies_timestamps...");
+		    database.executeUpdate(sqlCreateUserRatedTable);
 		    System.out.println("[OK]");
 		    
 		} catch (Exception e)
