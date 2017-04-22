@@ -54,7 +54,7 @@ public class Database
 				for(int i = 1; i <= cols; ++i)
 				{
 					System.out.print(result.getString(i));
-					if(i != cols) System.out.print(", ");
+					if(i != cols) System.out.print("\t ");
 				}
 				System.out.println();
 			}
@@ -92,7 +92,7 @@ public class Database
 		loadData("movie_tags",3);
 		loadData("tags",2);
 		loadData("user_ratedmovies_timestamps",4);
-		loadData("user_taggedmovies_timestamps",9);
+		loadData("user_taggedmovies_timestamps",4);
 		loadData("user_taggedmovies",9);
 		loadData("user_ratedmovies",9);
 	}

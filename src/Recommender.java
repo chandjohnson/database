@@ -2,12 +2,26 @@ import java.util.Scanner;
 
 public class Recommender
 {
-	public static void main(String[] args)
+	static Database db;
+	
+	public static void Main(String[] args)
 	{
-		Database db = new Database();
-		db.createTables();
-		db.migrateTables();
+		db = new Database();
 		
+		/*
+		 * Leave these methods commented out unless you want
+		 * to re-create the database, warning this will take
+		 * a long time depending on the speed of your machine.
+		 */
+		//db.createTables();
+		//db.migrateTables();
+		//commandLineInput();
+		
+		Gui gui = new Gui(args);
+	}
+
+	private void commandLineInput()
+	{
 		Scanner scanner = new Scanner(System.in);
 		
 		System.out.println("\nHow many top movies do you want to see?");
@@ -25,40 +39,40 @@ public class Recommender
 		System.out.println("\nHow many results would you LIKE?");
 		int k = Integer.parseInt(scanner.nextLine());
 		
-		db.query("SELECT DISTINCT title, year, rtAudienceScore, rtPictureURL, imdbPictureURL FROM movies, movie_genres g WHERE g.movieID = id AND genre LIKE \'%" + s + "%\' order by rtAudienceScore DESC LIMIT " + k);
+		db.query("SELECT DISTINCT title, year, rtAudienceScore, rtPictureURL, imdbPictureURL FROM movies, movie_genres g WHERE g.movieID = id AND genre LIKE \'%" + s + "%\' ORDER BY rtAudienceScore DESC LIMIT " + k);
 		
 		System.out.println("\nType a director to see top movies by him or her.");
 		s = scanner.nextLine();
 		
-		db.query("SELECT DISTINCT m.title, m.year, m.rtAudienceScore, m.rtPictureURL, m.imdbPictureURL FROM movies m, movie_directors d WHERE d.directorName LIKE \'%" + s + "%\' AND m.id = d.movieID order by year");
+		db.query("SELECT DISTINCT m.title, m.year, m.rtAudienceScore, m.rtPictureURL, m.imdbPictureURL FROM movies m, movie_directors d WHERE d.directorName LIKE \'%" + s + "%\' AND m.id = d.movieID ORDER BY year");
 		
 		System.out.println("\nType an actor to see movies that he or her acted in.");
 		s = scanner.nextLine();
 		
-		db.query("SELECT DISTINCT m.title, m.year, m.rtAudienceScore, m.rtPictureURL, m.imdbPictureURL FROM movies m, movie_actors a WHERE a.actorName LIKE \'%" + s + "%\' AND m.id = a.movieID order by year");
+		db.query("SELECT DISTINCT m.title, m.year, m.rtAudienceScore, m.rtPictureURL, m.imdbPictureURL FROM movies m, movie_actors a WHERE a.actorName LIKE \'%" + s + "%\' AND m.id = a.movieID ORDER BY year");
 		
 		System.out.println("\nType a movie tag to see top movies for that specific tag.");
 		s = scanner.nextLine();
 		
-		db.query("SELECT DISTINCT m.title, m.year, m.rtAudienceScore, m.rtPictureURL, m.imdbPictureURL FROM movies m, tags t, movie_tags mt WHERE t.value LIKE \'%" + s + "%\' AND m.id = mt.movieID AND mt.tagID = t.id order by rtAudienceScore DESC");
+		db.query("SELECT DISTINCT m.title, m.year, m.rtAudienceScore, m.rtPictureURL, m.imdbPictureURL FROM movies m, tags t, movie_tags mt WHERE t.value LIKE \'%" + s + "%\' AND m.id = mt.movieID AND mt.tagID = t.id ORDER BY rtAudienceScore DESC");
 		
 		System.out.println("\nShowing top directors, how many movies do they need to have made?");
 		k = Integer.parseInt(scanner.nextLine());
 		
 		db.query("SELECT DISTINCT d.directorName, avg(m.rtAudienceScore), count(m.id) FROM movies m, movie_directors d "
-	    		  + "WHERE d.movieID = m.id group by directorName having count(m.id) >= " + k + " order by avg(rtAudienceScore) DESC LIMIT 10");
+	    		  + "WHERE d.movieID = m.id group by directorName having count(m.id) >= " + k + " ORDER BY avg(rtAudienceScore) DESC LIMIT 10");
 		
 		System.out.println("\nShowing top actors, how many movies do they need to have been in?");
 		k = Integer.parseInt(scanner.nextLine());
 		
-		db.query("SELECT DISTINCT a.actorName, avg(m.rtAudienceScore), count(m.id) FROM movies m, movie_actors a WHERE a.movieID = m.id group by a.actorName having count(m.id) >= " + k + " order by avg(rtAudienceScore) DESC LIMIT 10");
+		db.query("SELECT DISTINCT a.actorName, avg(m.rtAudienceScore), count(m.id) FROM movies m, movie_actors a WHERE a.movieID = m.id group by a.actorName having count(m.id) >= " + k + " ORDER BY avg(rtAudienceScore) DESC LIMIT 10");
 		
 		System.out.println("\nType a user ID to show the ratings for that particular user.");
 		k = Integer.parseInt(scanner.nextLine());
 		
 		db.query("SELECT DISTINCT m.title, r.rating, g.genre, r.date_year, r.date_month, r.date_day, r.date_hour, r.date_minute, "
 	    		  		+"r.date_second FROM movies m, movie_genres g, user_ratedmovies r WHERE r.movieID = m.id "
-	    		  		+"AND g.movieID = r.movieID AND r.userID = " + k + " order by r.date_year, r.date_month, r.date_day, r.date_hour, r.date_minute, r.date_second");
+	    		  		+"AND g.movieID = r.movieID AND r.userID = " + k + " ORDER BY r.date_year, r.date_month, r.date_day, r.date_hour, r.date_minute, r.date_second");
 		
 		System.out.println("\nType a movie name to show all tags for that movie");
 		s = scanner.nextLine();
