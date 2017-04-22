@@ -40,8 +40,9 @@ public class Database
 		}
 	}
 	
-	public void query(String sqlQuery)
+	public String query(String sqlQuery)
 	{
+		StringBuilder retval = new StringBuilder();
 		try
 		{
 			ResultSet result = database.executeQuery(sqlQuery);
@@ -53,16 +54,17 @@ public class Database
 			{
 				for(int i = 1; i <= cols; ++i)
 				{
-					System.out.print(result.getString(i));
-					if(i != cols) System.out.print("\t ");
+					retval.append(result.getString(i));
+					if(i != cols) retval.append("\t ");
 				}
-				System.out.println();
+				retval.append("\n");
 			}
 		} catch (SQLException e)
 		{
 			System.out.println("[ERROR] " + e.toString());
 			e.printStackTrace();
 		}
+		return retval.toString();
 	}
 	
 	public void createTables()
