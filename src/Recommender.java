@@ -1,4 +1,6 @@
 import java.net.URL;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.ResourceBundle;
 import java.util.Scanner;
 
@@ -7,6 +9,7 @@ import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
@@ -15,6 +18,8 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.text.Text;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ListView;
@@ -23,7 +28,13 @@ import javafx.scene.control.TextArea;
 public class Recommender extends Application implements Initializable
 {
 	@FXML
+	TextArea infoBox;
+	@FXML
 	Button searchBtn;
+	@FXML
+	ImageView rtImage;
+	@FXML
+	ImageView imdbImage;
 	@FXML
 	TextField searchBar;
 	@FXML
@@ -31,12 +42,14 @@ public class Recommender extends Application implements Initializable
 	@FXML
 	TextField limitResults;
 	@FXML
-	TextArea result;
+	ListView<String> movieList;
 	@FXML
 	ChoiceBox<String> searchBy;
 
 	static Database db;
-
+	private String res;
+	private int mode = 0;
+	
 	public static void main(String[] args)
 	{
 		db = new Database();
@@ -72,14 +85,25 @@ public class Recommender extends Application implements Initializable
 	public void onClickSearchBtn(ActionEvent event)
 	{
 		int index = searchBy.getSelectionModel().getSelectedIndex();
+		int k = 0;
 		String s = searchBar.getText();
-		String k = limitResults.getText();
-		String res = "";
 		
-		if (index == 0)
+		try
 		{
-			res = db.query("SELECT DISTINCT title, year, rtAudienceScore, rtPictureURL, imdbPictureURL FROM movies ORDER BY rtAudienceScore DESC LIMIT " + k);
+			k = Integer.parseInt(limitResults.getText());
+		} catch (NumberFormatException e)
+		{
+			return;
 		}
+		
+		if(k == 0 && s.equals("")) return;
+		
+		imdbImage.setImage(null);
+		rtImage.setImage(null);
+		
+		mode = index;
+		
+		if (index == 0)	res = db.query("SELECT DISTINCT title, year, rtAudienceScore, rtPictureURL, imdbPictureURL FROM movies ORDER BY rtAudienceScore DESC LIMIT " + k);
 		else if (index == 1) res = db.query("SELECT DISTINCT title, m.year, m.rtAudienceScore, m.rtPictureURL, m.imdbPictureURL, t.value FROM movies m, tags t, user_taggedmovies_timestamps u WHERE m.title LIKE \'%"+ s + "%\' AND m.id = u.movieID AND u.tagID = t.id ORDER BY title");
 		else if (index == 2) res = db.query("SELECT DISTINCT title, year, rtAudienceScore, rtPictureURL, imdbPictureURL FROM movies, movie_genres g WHERE g.movieID = id AND genre LIKE \'%" + s + "%\' ORDER BY rtAudienceScore DESC LIMIT " + k);
 		else if (index == 3) res = db.query("SELECT DISTINCT m.title, m.year, m.rtAudienceScore, m.rtPictureURL, m.imdbPictureURL FROM movies m, movie_directors d WHERE d.directorName LIKE \'%"+ s + "%\' AND m.id = d.movieID ORDER BY year");
@@ -94,15 +118,27 @@ public class Recommender extends Application implements Initializable
 			+ "r.date_second FROM movies m, movie_genres g, user_ratedmovies r WHERE r.movieID = m.id "
 			+ "AND g.movieID = r.movieID AND r.userID = " + k
 			+ " ORDER BY r.date_year, r.date_month, r.date_day, r.date_hour, r.date_minute, r.date_second");
-		else if (index == 9) res = db.query("SELECT DISTINCT t.value FROM tags t, movie_tags mt, movies m WHERE mt.tagID = t.id AND m.title LIKE \'%"
-			+ s + "%\' AND m.id = mt.movieID");
+		else if (index == 9) res = db.query("SELECT DISTINCT t.value FROM tags t, movie_tags mt, movies m WHERE mt.tagID = t.id AND m.title = \'" + s + "\' AND m.id = mt.movieID");
 		
-		result.setText(res);
+		String resArr[] = res.split("\n");
+		
+		for(int i = 0; i < resArr.length; ++i) resArr[i] = resArr[i].split("\t")[0];
+		
+		if(index == 1) resArr = new HashSet<String>(Arrays.asList(resArr)).toArray(new String[0]);
+		
+		if(!res.equals(""))
+		{
+			ObservableList<String> items = FXCollections.observableArrayList(resArr);
+			movieList.setItems(items);
+			movieList.getSelectionModel().selectFirst();
+		}
 	}
 
 	public void initialize(URL location, ResourceBundle resources)
 	{		
 		searchBar.setVisible(false);
+		
+		limitResults.setText("10");
 		
 		searchBy.getItems().removeAll(searchBy.getItems());
 		searchBy.setItems(FXCollections.observableArrayList(
@@ -112,21 +148,107 @@ public class Recommender extends Application implements Initializable
 				"Type a director to see top movies by him or her.",
 				"Type an actor to see movies that he or her acted in.",
 				"Type a movie tag to see top movies for that specific tag.",
-				"Show directors that have made at least this number of movies.",
-				"Show actors that have been in least this number of movies.",
+				"Show top 10 directors that have made at least this number of movies.",
+				"Show top 10 actors that have been in least this number of movies.",
 				"Type a user ID to see the ratings for that particular user.",
 				"Type a movie name to show all tags for that movie"
 				));
 		searchBy.getSelectionModel().selectFirst();
 		
-		searchBy.getSelectionModel().selectedItemProperty().addListener( (ObservableValue<? extends String> observable, String oldValue, String newValue) -> selectionChanged() );
+		searchBy.getSelectionModel().selectedItemProperty().addListener( (ObservableValue<? extends String> observable, String oldValue, String newValue) -> searchByChanged() );
+	
+		movieList.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
+		    public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+		    	movieListChanged();
+		    }
+		});
 	}
 	
-	private void selectionChanged()
+	private void standardDisplay(String[] colArr)
+	{
+		infoBox.appendText("Year: " + colArr[1] + "\n");
+		infoBox.appendText("Rating out of 100: " + colArr[2]);
+		
+		try
+		{
+			imdbImage.setImage(new Image(colArr[3].replaceAll(" ", "")));
+		}
+		catch(Exception e){}
+		try
+		{
+			rtImage.setImage(new Image(colArr[4].replaceAll(" ", "")));
+		}
+		catch(Exception e){}
+	}
+	
+	private void personDisplay(String[] colArr)
+	{
+		Float score = Float.parseFloat(colArr[1]);
+		score = (float) Math.round(score * 10)/10;
+		
+		infoBox.appendText("Average Rotten Tomatoes score: " + score + "\n");
+		infoBox.appendText("Movies: " + colArr[2]);
+	}
+	
+	private void movieListChanged()
+	{
+		infoBox.setText("");
+		int index = movieList.getSelectionModel().getSelectedIndex();
+		if(movieList.getSelectionModel().getSelectedItems().size() == 0) return;
+		
+		if(index == -1) return;
+		
+		String resArr[] = res.split("\n");
+		
+		if(resArr.length < 1) return;
+		
+		String colArr[] = resArr[index].split("\t");
+		
+		if(colArr.length < 1) return;
+		
+		if(mode == 1)
+		{
+			String movieName = movieList.getSelectionModel().getSelectedItem();
+			boolean found = false;
+			
+			for(int i = 0; i < resArr.length; ++i)
+			{
+				String[] spl = resArr[i].split("\t");
+				if(spl[0].equals(movieName))
+				{
+					if(!found)
+					{
+						infoBox.appendText("Year: " + spl[1] + "\n");
+						infoBox.appendText("Rating out of 100: " + spl[2] + "\n");
+						
+						try
+						{
+							imdbImage.setImage(new Image(spl[3].replaceAll(" ", "")));
+						}
+						catch(Exception e){}
+						try
+						{
+							rtImage.setImage(new Image(spl[3].replaceAll(" ", "")));
+						}
+						catch(Exception e){}
+						
+						found = true;
+					}
+					infoBox.appendText("User tag: " + spl[5] + "\n");
+				}
+			}
+		}
+		else if (mode == 6 || mode == 7) personDisplay(colArr);
+		else if (mode == 8);
+		else standardDisplay(colArr);
+	}
+	
+	private void searchByChanged()
 	{
 		int index = searchBy.getSelectionModel().getSelectedIndex();
 		if(index == 0)
 		{
+			limitResults.setText("10");
 			limitResultsText.setVisible(true);
 			limitResultsText.setText("Limit Results");
 			limitResults.setVisible(true);
@@ -140,6 +262,7 @@ public class Recommender extends Application implements Initializable
 		}
 		else if(index == 2)
 		{
+			limitResults.setText("10");
 			limitResultsText.setVisible(true);
 			limitResultsText.setText("Limit Results");
 			limitResults.setVisible(true);
@@ -165,17 +288,19 @@ public class Recommender extends Application implements Initializable
 		}
 		else if(index == 6)
 		{
+			limitResults.setText("10");
 			limitResultsText.setVisible(true);
 			limitResultsText.setText("Movies");
 			limitResults.setVisible(true);
-			searchBar.setVisible(true);
+			searchBar.setVisible(false);
 		}
 		else if(index == 7)
 		{
+			limitResults.setText("10");
 			limitResultsText.setVisible(true);
 			limitResultsText.setText("Movies");
 			limitResults.setVisible(true);
-			searchBar.setVisible(true);
+			searchBar.setVisible(false);
 		}
 		else if(index == 8)
 		{
