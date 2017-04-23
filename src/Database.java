@@ -18,7 +18,7 @@ public class Database
 	Statement database = null;
 	Connection connection = null;
 	   
-	public Database()
+	public Database(String DATABASE, String USERNAME, String PASSWORD)
 	{	
 		try{
 			//Registering the JDBC DRIVER

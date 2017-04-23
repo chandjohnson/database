@@ -3,6 +3,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.ResourceBundle;
 import java.util.Scanner;
 
@@ -36,6 +37,8 @@ public class Recommender extends Application implements Initializable
 	@FXML
 	ImageView rtImage;
 	@FXML
+	Button favoritesBtn;
+	@FXML
 	ImageView imdbImage;
 	@FXML
 	TextField searchBar;
@@ -47,48 +50,77 @@ public class Recommender extends Application implements Initializable
 	ListView<String> movieList;
 	@FXML
 	ChoiceBox<String> searchBy;
+	@FXML
+	ListView<String> favoritesList;
 
 	static Database db;
-	private String res;
+	private String res = "";
 	private int mode = 0;
 	
 	public static void main(String[] args)
 	{
-		db = new Database();
-		
 		Scanner scanner = new Scanner(System.in);
 		String x = "";
+		
 		do
 		{
-			System.out.print("\nDo you want to migrate the database Y/N? ");
+			System.out.print("\nDo you want to set up your database username and password Y/N? ");
 			x = scanner.nextLine();
 		} while(!x.equals("Y") && !x.equals("N"));
 		
 		if(x.equals("Y"))
 		{
+			System.out.print("Enter your database name: ");
+			String database = scanner.nextLine();
+			System.out.print("Enter your database username: ");
+			String username = scanner.nextLine();
+			System.out.print("Enter your datbase password: ");
+			String password = scanner.nextLine();
+			
+			db = new Database(database, username, password);
+			
 			do
 			{
-				System.out.print("WARNING, this will possibly take a long time are you sure? Y/N ");
+				System.out.print("Do you want to migrate all the data (Warning this will take some time) Y/N? ");
 				x = scanner.nextLine();
 			} while(!x.equals("Y") && !x.equals("N"));
 			
 			if(x.equals("Y"))
 			{
-				System.out.println();
 				db.createTables();
 				db.migrateTables();
 			}
+		} else if (x.equals("N"))
+		{
+			System.out.println("Default values being used.");
+			db = new Database("movie_recommender", "root", "windowlicker");
 		}
 		scanner.close();
 
 		launch(args);
 
 	}
+	
+	public void onClickAddToFavorites(ActionEvent event)
+	{
+		try
+		{
+			movieList.getSelectionModel().getSelectedItem().equals("null");
+		} catch (Exception e)
+		{
+			return;
+		}
+		if(!favoritesList.getItems().contains(movieList.getSelectionModel().getSelectedItem()))
+		{
+			favoritesList.getItems().add(movieList.getSelectionModel().getSelectedItem());
+		}
+	}
 
 	public void onClickSearchBtn(ActionEvent event)
 	{
+		movieList.getItems().clear();
 		int index = searchBy.getSelectionModel().getSelectedIndex();
-		int k = 0;
+		int k = 10;
 		String s = searchBar.getText();
 		
 		try
@@ -100,6 +132,7 @@ public class Recommender extends Application implements Initializable
 		}
 		
 		if(k == 0 && s.equals("")) return;
+		s = s.replaceAll("'", "''");
 		
 		imdbImage.setImage(null);
 		rtImage.setImage(null);
@@ -108,7 +141,7 @@ public class Recommender extends Application implements Initializable
 		
 		if (index == 0)	res = db.query("SELECT DISTINCT title, year, rtAudienceScore, rtPictureURL, imdbPictureURL FROM movies ORDER BY rtAudienceScore DESC LIMIT " + k);
 		else if (index == 1) res = db.query("SELECT DISTINCT title, m.year, m.rtAudienceScore, m.rtPictureURL, m.imdbPictureURL, t.value FROM movies m, tags t, user_taggedmovies_timestamps u WHERE m.title LIKE \'%"+ s + "%\' AND m.id = u.movieID AND u.tagID = t.id ORDER BY title");
-		else if (index == 2) res = db.query("SELECT DISTINCT title, year, rtAudienceScore, rtPictureURL, imdbPictureURL FROM movies, movie_genres g WHERE g.movieID = id AND genre LIKE \'%" + s + "%\' ORDER BY rtAudienceScore DESC LIMIT " + k);
+		else if (index == 2) res = db.query("SELECT DISTINCT title, year, rtAudienceScore, rtPictureURL, imdbPictureURL FROM movies, movie_genres g WHERE g.movieID = id AND genre = \'" + s + "\' ORDER BY rtAudienceScore DESC LIMIT " + k);
 		else if (index == 3) res = db.query("SELECT DISTINCT m.title, m.year, m.rtAudienceScore, m.rtPictureURL, m.imdbPictureURL FROM movies m, movie_directors d WHERE d.directorName LIKE \'%"+ s + "%\' AND m.id = d.movieID ORDER BY year");
 		else if (index == 4) res = db.query("SELECT DISTINCT m.title, m.year, m.rtAudienceScore, m.rtPictureURL, m.imdbPictureURL FROM movies m, movie_actors a WHERE a.actorName LIKE \'%"+ s + "%\' AND m.id = a.movieID ORDER BY year");
 		else if (index == 5) res = db.query("SELECT DISTINCT m.title, m.year, m.rtAudienceScore, m.rtPictureURL, m.imdbPictureURL FROM movies m, tags t, movie_tags mt WHERE t.value LIKE \'%"+ s + "%\' AND m.id = mt.movieID AND mt.tagID = t.id ORDER BY rtAudienceScore DESC");
@@ -122,8 +155,55 @@ public class Recommender extends Application implements Initializable
 			+ "AND g.movieID = r.movieID AND r.userID = " + k
 			+ " ORDER BY r.date_year, r.date_month, r.date_day, r.date_hour, r.date_minute, r.date_second");
 		else if (index == 9) res = db.query("SELECT DISTINCT t.value FROM tags t, movie_tags mt, movies m WHERE mt.tagID = t.id AND m.title = \'" + s + "\' AND m.id = mt.movieID");
+		else if (index == 10)
+		{
+			if(favoritesList.getItems().size() == 0) return;
+			
+			List<String> favorites = favoritesList.getItems();
+			StringBuilder sb = new StringBuilder();
+			sb.append("SELECT DISTINCT g.genre FROM movie_genres g, movies m WHERE m.id = g.movieID AND m.title = ");
+			
+			for(int i = 0; i < favorites.size(); ++i)
+			{
+				sb.append("'" + favorites.get(i).replaceAll("'", "''") + "'");
+				if(i != favorites.size() - 1) sb.append(" OR m.title = ");
+			}
+			
+			res = db.query(sb.toString());
+			
+			String[] resArr = res.split("\n");
+			
+			res = "";
+			
+			for(int i = 0; i < resArr.length; ++i)
+			{
+				System.out.println("Searching for genre " + resArr[i]);
+				res += db.query("SELECT DISTINCT title, year, rtAudienceScore, rtPictureURL, imdbPictureURL FROM movies, movie_genres g WHERE g.movieID = id AND g.genre = '" + resArr[i].replaceAll("'", "''") + "' ORDER BY rtAudienceScore DESC LIMIT 5");
+			}
+		}
+		else if (index == 11)
+		{
+			if(favoritesList.getItems().size() == 0) return;
+			
+			List<String> favorites = favoritesList.getItems();
+			
+			for(int i = 0; i < favorites.size(); ++i)
+			{
+				res += db.query("SELECT DISTINCT d.directorName FROM movie_directors d, movies m WHERE m.id = d.movieID AND m.title = '" + favorites.get(i) + "'");
+			}
+			
+			String[] resArr = res.split("\n");
+			
+			res = "";
+			
+			for(int i = 0; i < resArr.length; ++i)
+			{
+				System.out.println("Searching for director " + resArr[i]);
+				res += db.query("SELECT DISTINCT title, year, rtAudienceScore, rtPictureURL, imdbPictureURL FROM movies, movie_directors d WHERE d.movieID = id AND d.directorName = '"+ resArr[i].replaceAll("'", "''") + "' ORDER BY rtAudienceScore DESC LIMIT 5");
+			}
+		}
 		
-		System.out.println(res);
+		if(res.equals("")) return;
 		
 		String resArr[] = res.split("\n");
 		
@@ -131,12 +211,9 @@ public class Recommender extends Application implements Initializable
 		
 		if(index == 1 || index == 8) resArr = new HashSet<String>(Arrays.asList(resArr)).toArray(new String[0]);
 		
-		if(!res.equals(""))
-		{
-			ObservableList<String> items = FXCollections.observableArrayList(resArr);
-			movieList.setItems(items);
-			movieList.getSelectionModel().selectFirst();
-		}
+		ObservableList<String> items = FXCollections.observableArrayList(resArr);
+		movieList.setItems(items);
+		movieList.getSelectionModel().selectFirst();
 	}
 
 	public void initialize(URL location, ResourceBundle resources)
@@ -156,7 +233,9 @@ public class Recommender extends Application implements Initializable
 				"Show top 10 directors that have made at least this number of movies.",
 				"Show top 10 actors that have been in least this number of movies.",
 				"Type a user ID to see the ratings for that particular user.",
-				"Type a movie name to show all tags for that movie"
+				"Type a movie name to show all tags for that movie",
+				"Find the top 5 movies I should see based on each of my favorite genres.",
+				"Find the top 5 movies I should see based on each of my favorite directors."
 				));
 		searchBy.getSelectionModel().selectFirst();
 		
@@ -199,8 +278,6 @@ public class Recommender extends Application implements Initializable
 	{
 		infoBox.setText("");
 		int index = movieList.getSelectionModel().getSelectedIndex();
-		
-		System.out.println(index);
 		
 		if(movieList.getSelectionModel().getSelectedItems().size() == 0) return;
 		
@@ -283,11 +360,14 @@ public class Recommender extends Application implements Initializable
 			infoBox.appendText("User's rated date: " + colArr[4].replaceAll(" ", "") + "/" + colArr[5].replaceAll(" ", "") + "/" + colArr[3].replaceAll(" ", "") + " at " + colArr[6].replaceAll(" ", "") + ":" + colArr[7].replaceAll(" ", "") + "\n");
 			
 		}
+		else if (mode == 9);
 		else standardDisplay(colArr);
 	}
 	
 	private void searchByChanged()
 	{
+		movieList.getItems().clear();
+		
 		int index = searchBy.getSelectionModel().getSelectedIndex();
 		if(index == 0)
 		{
@@ -296,12 +376,14 @@ public class Recommender extends Application implements Initializable
 			limitResultsText.setText("Limit Results");
 			limitResults.setVisible(true);
 			searchBar.setVisible(false);
+			favoritesBtn.setVisible(true);
 		}
 		else if(index == 1)
 		{
 			limitResultsText.setVisible(false);
 			limitResults.setVisible(false);
 			searchBar.setVisible(true);
+			favoritesBtn.setVisible(true);
 		}
 		else if(index == 2)
 		{
@@ -310,24 +392,28 @@ public class Recommender extends Application implements Initializable
 			limitResultsText.setText("Limit Results");
 			limitResults.setVisible(true);
 			searchBar.setVisible(true);
+			favoritesBtn.setVisible(true);
 		}
 		else if(index == 3)
 		{
 			limitResultsText.setVisible(false);
 			limitResults.setVisible(false);
 			searchBar.setVisible(true);
+			favoritesBtn.setVisible(true);
 		}
 		else if(index == 4)
 		{
 			limitResultsText.setVisible(false);
 			limitResults.setVisible(false);
 			searchBar.setVisible(true);
+			favoritesBtn.setVisible(true);
 		}
 		else if(index == 5)
 		{
 			limitResultsText.setVisible(false);
 			limitResults.setVisible(false);
 			searchBar.setVisible(true);
+			favoritesBtn.setVisible(true);
 		}
 		else if(index == 6)
 		{
@@ -336,6 +422,7 @@ public class Recommender extends Application implements Initializable
 			limitResultsText.setText("Movies");
 			limitResults.setVisible(true);
 			searchBar.setVisible(false);
+			favoritesBtn.setVisible(false);
 		}
 		else if(index == 7)
 		{
@@ -344,6 +431,7 @@ public class Recommender extends Application implements Initializable
 			limitResultsText.setText("Movies");
 			limitResults.setVisible(true);
 			searchBar.setVisible(false);
+			favoritesBtn.setVisible(false);
 		}
 		else if(index == 8)
 		{
@@ -352,12 +440,28 @@ public class Recommender extends Application implements Initializable
 			limitResultsText.setText("User ID");
 			limitResults.setVisible(true);
 			searchBar.setVisible(false);
+			favoritesBtn.setVisible(false);
 		}
 		else if(index == 9)
 		{
 			limitResultsText.setVisible(false);
 			limitResults.setVisible(false);
-			searchBar.setVisible(true);
+			searchBar.setVisible(false);
+			favoritesBtn.setVisible(false);
+		}
+		else if(index == 10)
+		{
+			limitResultsText.setVisible(false);
+			limitResults.setVisible(false);
+			searchBar.setVisible(false);
+			favoritesBtn.setVisible(false);
+		}
+		else if(index == 11)
+		{
+			limitResultsText.setVisible(false);
+			limitResults.setVisible(false);
+			searchBar.setVisible(false);
+			favoritesBtn.setVisible(false);
 		}
 	}
 
@@ -368,6 +472,7 @@ public class Recommender extends Application implements Initializable
 		{
 			Parent root = FXMLLoader.load(getClass().getResource("/recommender.fxml"));
 			Scene scene = new Scene(root);
+			primaryStage.setResizable(false);
 			primaryStage.setTitle("MovieFox");
 			primaryStage.setScene(scene);
 			primaryStage.show();
