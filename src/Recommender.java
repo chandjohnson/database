@@ -202,6 +202,8 @@ public class Recommender extends Application implements Initializable
 				res += db.query("SELECT DISTINCT title, year, rtAudienceScore, rtPictureURL, imdbPictureURL FROM movies, movie_directors d WHERE d.movieID = id AND d.directorName = '"+ resArr[i].replaceAll("'", "''") + "' ORDER BY rtAudienceScore DESC LIMIT 5");
 			}
 		}
+		else if(index == 12) res = db.query("SELECT DISTINCT m.title, m.year, m.rtAudienceScore, m.rtPictureURL, m.imdbPictureURL FROM movies m, movie_locations l WHERE m.id = l.movieID AND l.location1 LIKE '%" + s + "%'ORDER BY m.rtAudienceScore DESC LIMIT " + k);
+		
 		
 		if(res.equals("")) return;
 		
@@ -235,7 +237,8 @@ public class Recommender extends Application implements Initializable
 				"Type a user ID to see the ratings for that particular user.",
 				"Type a movie name to show all tags for that movie",
 				"Find the top 5 movies I should see based on each of my favorite genres.",
-				"Find the top 5 movies I should see based on each of my favorite directors."
+				"Find the top 5 movies I should see based on each of my favorite directors.",
+				"Type in a movie location to find the top movies for that place."
 				));
 		searchBy.getSelectionModel().selectFirst();
 		
@@ -462,6 +465,15 @@ public class Recommender extends Application implements Initializable
 			limitResults.setVisible(false);
 			searchBar.setVisible(false);
 			favoritesBtn.setVisible(false);
+		}
+		else if(index == 12)
+		{
+			limitResults.setText("10");
+			limitResultsText.setVisible(true);
+			limitResultsText.setText("Limit Results");
+			limitResults.setVisible(true);
+			searchBar.setVisible(true);
+			favoritesBtn.setVisible(true);
 		}
 	}
 
