@@ -1,5 +1,7 @@
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.ResourceBundle;
 import java.util.Scanner;
@@ -77,6 +79,7 @@ public class Recommender extends Application implements Initializable
 				db.migrateTables();
 			}
 		}
+		scanner.close();
 
 		launch(args);
 
@@ -120,11 +123,13 @@ public class Recommender extends Application implements Initializable
 			+ " ORDER BY r.date_year, r.date_month, r.date_day, r.date_hour, r.date_minute, r.date_second");
 		else if (index == 9) res = db.query("SELECT DISTINCT t.value FROM tags t, movie_tags mt, movies m WHERE mt.tagID = t.id AND m.title = \'" + s + "\' AND m.id = mt.movieID");
 		
+		System.out.println(res);
+		
 		String resArr[] = res.split("\n");
 		
 		for(int i = 0; i < resArr.length; ++i) resArr[i] = resArr[i].split("\t")[0];
 		
-		if(index == 1) resArr = new HashSet<String>(Arrays.asList(resArr)).toArray(new String[0]);
+		if(index == 1 || index == 8) resArr = new HashSet<String>(Arrays.asList(resArr)).toArray(new String[0]);
 		
 		if(!res.equals(""))
 		{
@@ -194,13 +199,16 @@ public class Recommender extends Application implements Initializable
 	{
 		infoBox.setText("");
 		int index = movieList.getSelectionModel().getSelectedIndex();
+		
+		System.out.println(index);
+		
 		if(movieList.getSelectionModel().getSelectedItems().size() == 0) return;
 		
 		if(index == -1) return;
 		
 		String resArr[] = res.split("\n");
 		
-		if(resArr.length < 1) return;
+		if(resArr.length < 1 || resArr.length - 1 < index) return;
 		
 		String colArr[] = resArr[index].split("\t");
 		
@@ -239,7 +247,42 @@ public class Recommender extends Application implements Initializable
 			}
 		}
 		else if (mode == 6 || mode == 7) personDisplay(colArr);
-		else if (mode == 8);
+		else if (mode == 8)
+		{
+			ArrayList<String> genres = new ArrayList<String>();
+			ArrayList<String> total = new ArrayList<String>();
+			
+			for(int i = 0; i < resArr.length; ++i)
+			{
+				String[] splc = resArr[i].split("\t");
+				
+				if(!genres.contains(splc[2])) genres.add(splc[2]);
+				
+				total.add(splc[2]);
+			}
+			for(int i = 0; i < genres.size(); ++i)
+			{
+				String genre = genres.get(i);
+				float percentage = (float)Collections.frequency(total, genre) / resArr.length;
+				percentage = percentage * 100;
+				percentage = (float) Math.round(percentage * 100.0) / 100;
+				infoBox.appendText("Percentage of movies that are " + genre + ": " + percentage + "%\n");
+			}
+			
+			String movieName = movieList.getSelectionModel().getSelectedItem();
+			
+			for(int i = 0; i < resArr.length; ++i)
+			{
+				colArr = resArr[i].split("\t");
+				if(colArr[0].equals(movieName)) break;
+			}
+			
+			infoBox.appendText("=======================\n");
+			infoBox.appendText("User's rate out of 5: " + colArr[1] + "\n");
+			infoBox.appendText("User's rated genre: " + colArr[2] + "\n");
+			infoBox.appendText("User's rated date: " + colArr[4].replaceAll(" ", "") + "/" + colArr[5].replaceAll(" ", "") + "/" + colArr[3].replaceAll(" ", "") + " at " + colArr[6].replaceAll(" ", "") + ":" + colArr[7].replaceAll(" ", "") + "\n");
+			
+		}
 		else standardDisplay(colArr);
 	}
 	
@@ -304,9 +347,11 @@ public class Recommender extends Application implements Initializable
 		}
 		else if(index == 8)
 		{
-			limitResultsText.setVisible(false);
-			limitResults.setVisible(false);
-			searchBar.setVisible(true);
+			limitResults.setText("7612");
+			limitResultsText.setVisible(true);
+			limitResultsText.setText("User ID");
+			limitResults.setVisible(true);
+			searchBar.setVisible(false);
 		}
 		else if(index == 9)
 		{
@@ -333,6 +378,7 @@ public class Recommender extends Application implements Initializable
 		}
 	}
 
+	@SuppressWarnings("unused")
 	private void commandLineInput()
 	{
 		Scanner scanner = new Scanner(System.in);
@@ -410,5 +456,6 @@ public class Recommender extends Application implements Initializable
 		db.query(
 				"SELECT DISTINCT t.value FROM tags t, movie_tags mt, movies m WHERE mt.tagID = t.id AND m.title LIKE \'%"
 						+ s + "%\' AND m.id = mt.movieID");
+		scanner.close();
 	}
 }
